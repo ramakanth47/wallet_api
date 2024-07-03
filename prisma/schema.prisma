@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String   @db.VarChar(250)
+  firstName       String   @db.VarChar(150)
+  lastName        String   @db.VarChar(150)
+  wallet          Wallet?
+  permissionFlags Int      @default(1)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @default(now())
+}
+
+model Wallet {
+  id                 String              @id @default(uuid())
+  balance            Float               @default(0)
+  user_id            String?             @unique
+  user               User?               @relation(fields: [user_id], references: [id], onDelete: SetNull)
+  debitTransactions  WalletTransaction[] @relation("debit_wallet")
+  creditTransactions WalletTransaction[] @relation("credit_wallet")
+  created_at         DateTime            @default(now())
+  updated_at         DateTime            @default(now())
+}
+
+enum WalletTransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum WalletTransactionType {
+  WalletFunding
+  WalletToWallet
+}
+
+model WalletTransaction {
+  id                         String                  @id @default(uuid())
+  amount                     Int
+  ref                        String                  @db.VarChar(100)
+  narration                  String?                 @db.VarChar(100)
+  type                       WalletTransactionType
+  status                     WalletTransactionStatus
+  prev_credit_wallet_balance Int?
+  new_credit_wallet_balance  Int?
+  prev_debit_wallet_balance  Int?
+  new_debit_wallet_balance   Int?
+  debit_wallet_id            String?
+  credit_wallet_id           String
+  debit_wallet               Wallet?                 @relation("debit_wallet", fields: [debit_wallet_id], references: [id])
+  credit_wallet              Wallet?                 @relation("credit_wallet", fields: [credit_wallet_id], references: [id])
+  created_at                 DateTime                @default(now())
+  updated_at                 DateTime                @default(now())
+}
